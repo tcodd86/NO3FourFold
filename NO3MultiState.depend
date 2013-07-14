@@ -44,3 +44,21 @@
 
 947204612 x:\tcodd\no3 analysis\no3multistatesvmodel\model.h
 
+1373820051 source:c:\users\terrance\documents\workstuff\no3fourfoldmodel\no3fourfold\mathutil.cpp
+	"msdef.h"
+	<math.h>
+	"mathutil.h"
+
+1373820051 c:\users\terrance\documents\workstuff\no3fourfoldmodel\no3fourfold\msdef.h
+
+1373820051 c:\users\terrance\documents\workstuff\no3fourfoldmodel\no3fourfold\mathutil.h
+
+1373833149 source:c:\users\terrance\documents\workstuff\no3fourfoldmodel\no3fourfold\no3_fourfold_beta.cpp
+	"msdef.h"
+	"mathutil.h"
+	<malloc.h>
+	<math.h>
+	"model.h"
+
+1373820051 c:\users\terrance\documents\workstuff\no3fourfoldmodel\no3fourfold\model.h
+
