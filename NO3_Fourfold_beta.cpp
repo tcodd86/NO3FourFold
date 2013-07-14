@@ -1681,26 +1681,17 @@ void Inten( int* pnCount,
 				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N - 1;
-					  //j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K, 0);
-					  //coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
-					  //sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N - 1, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N) * TDM3J(LoStIndex.N - 1, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
-				  }
+                  }
 				  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.K != 0 && LoStIndex.N != 0)
 				  {
 				      upStateN = LoStIndex.N;
-					  //j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K, 0);
-					  //coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2 + 1;
 					  coeff += 1;
-					  //sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N) * TDM3J(LoStIndex.N, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
-				  }
+                  }
 				  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N + 1;
-					  //j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K, 0);
-					  //coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2 + 2;
 					  coeff += 2;
-					  //sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N + 1, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N) * TDM3J(LoStIndex.N + 1, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
-				  }
+                  }
 				  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
 				  sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N) * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
 			  }//end for loop
@@ -1714,11 +1705,13 @@ void Inten( int* pnCount,
 				  for(int i = 0; i < DIM; i++)
 				  {
 				      LoStIndex = MWCIndex(LoStQN, i);
+				      co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
 					  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 					  {
-						  co = pow(-1.0, LoStIndex.N * 2 - 1 + 1);//this is the coefficient to transform the 3J symbols
+					      co *= -1;
 						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
 						  {
+						      upStateK = LoStIndex.K - 1;
 							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K - 1, symm);
 							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;//coefficient in front of the 6J symbol
 							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
@@ -1737,7 +1730,6 @@ void Inten( int* pnCount,
 
 					  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.N != 0)
 					  {
-						  co = pow(-1.0, LoStIndex.N * 2 + 1);
 						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
 						  {
 							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K - 1, symm);
@@ -1758,7 +1750,7 @@ void Inten( int* pnCount,
 
 					  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
 					  {
-						  co = pow(-1, LoStIndex.N * 2 + 1 + 1);
+					      co *= -1;
 						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
 						  {
 							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K - 1, symm);
@@ -1775,7 +1767,7 @@ void Inten( int* pnCount,
 								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
 								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
 						  }
-					  }
+					  }//end if N+1 = uNL/uNH
 
 				  }//end loop over lostate wf
 			  }//end loop over E+/E-
