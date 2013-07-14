@@ -1679,7 +1679,7 @@ void Inten( int* pnCount,
 				  {
 					  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K, 0);
 					  coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2 - 1;
-					  sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N) * TDM3J(LoStIndex.N - 1, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+					  sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N - 1, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N) * TDM3J(LoStIndex.N - 1, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
 				  }
 				  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.K != 0 && LoStIndex.N != 0)
 				  {
@@ -1691,7 +1691,7 @@ void Inten( int* pnCount,
 				  {
 					  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K, 0);
 					  coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2 + 1;
-					  sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N) * TDM3J(LoStIndex.N + 1, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+					  sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N + 1, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N) * TDM3J(LoStIndex.N + 1, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
 				  }
 			  }//end for loop
 		  }//end if bFlagA == true
