@@ -1707,21 +1707,27 @@ void Inten( int* pnCount,
 				  coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
 				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 				  {
-				      upStateN = LoStIndex.N - 1;
+				      upStateN = LoStIndex.N - 1;\
+				      j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 				  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.K != 0 && LoStIndex.N != 0)
 				  {
 				      upStateN = LoStIndex.N;
 					  coeff += 1;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 				  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N + 1;
 					  coeff += 2;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
-				  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-				  sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
-                    * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
 			  }//end for loop
 		  }//end if bFlagA == true
 
@@ -1801,11 +1807,11 @@ void Inten( int* pnCount,
 			  }//end loop over E+/E-
 		  }//end if bFlagBC
 
-		  LS = (dJL+1)*(dJU+1)*sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
+		  LS = (double)((dJL+1)*(dJU+1))*sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
 		  BF = exp(-(dLoStEnerg - EMIN)/(RK*pdParam[0]))-exp(-(dUpStEnerg - EMIN)/(RK*pdParam[0]));   /* Boltzmann factor */
 		  RINTE = ((int)pdParam[23]==0? 1 : NSSW(LoStQN[1], LoStQN[2])) * BF * LS;
 		  *(pnCount)++;
-		  if((RINTE >= pdParam[3]) && (dUpStEnerg>dLoStEnerg))
+		  if((RINTE >= pdParam[3]))// && (dUpStEnerg>dLoStEnerg))
 		  {
 			  *fInten = (float)RINTE;
 		  }
