@@ -837,6 +837,7 @@ void Assign( UINT nStateType, double* pdStWF, int* StQN, int StNum )
 
 	if(nStateType == 1)//Working assignment function for Fourfold states
 	{
+	    int j = 0;
 		idx QN;
 		int id, DIM;
 		DIM = 8*(StQN[0] + 1);
