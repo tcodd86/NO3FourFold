@@ -1708,7 +1708,7 @@ void Inten( int* pnCount,
 				  coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
 				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 				  {
-				      upStateN = LoStIndex.N - 1;\
+				      upStateN = LoStIndex.N - 1;
 				      j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
                       sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
                         * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
