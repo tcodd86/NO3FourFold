@@ -473,7 +473,7 @@ void InitCo( UINT nStateType, double* pdConst )
 		pdConst[6] = 0.0;//Bzz  E
 		pdConst[7] = 0.0;//Byy  E
 		pdConst[8] = 0.0;//Bxx  E
-		pdConst[21] = 0.15;
+		pdConst[21] = 0.015;
 		return;
 	}
 }
@@ -1265,15 +1265,21 @@ void DHamilt( UINT nStateType,
 {
 
 	  UINT i, j;
-	  double *pdIndicators, **ppdHbase;
+	  double *pdIndicators, **ppdHbase, *pdOnes;
 	  int **ppnQNm;
 	  UINT nDim;
 	  int lCN;
 	  lCN = ConNum(nStateType);
 	  pdIndicators = (double *)calloc(lCN , sizeof( double ) );
 
+	  pdOnes = (double *)calloc(lCN , sizeof(double));
+
 	  nDim = HamSize(nStateType,pnQNd);  /* Hamiltonian is (4*J+2)x(4*J+2) */
-	  for ( int i = 0; i < lCN; i++ ) pdIndicators[i]=1.0;
+	  for ( int i = 0; i < lCN; i++ )
+      {
+          pdIndicators[i]=1.0;
+          pdOnes[i] = 1.0;
+      }
 	  pdIndicators[k] +=1.0;
 	  ppnQNm = (int**)calloc( nDim, sizeof( int* ) );
 	  ppdHbase = (double**)calloc(nDim, sizeof(double*));
@@ -1283,7 +1289,8 @@ void DHamilt( UINT nStateType,
 		ppnQNm[i] = (int*)calloc( QNnumB(nStateType), sizeof(int) );
 		ppdHbase[i] = (double*)calloc( nDim, sizeof(double));
 	  }
-	Hamilt (nStateType, pdConst, pnQNd, ppdHbase, ppnQNm);
+	//Hamilt (nStateType, pdConst, pnQNd, ppdHbase, ppnQNm);
+	Hamilt (nStateType, pdOnes, pnQNd, ppdHbase, ppnQNm);
 	Hamilt( nStateType, pdIndicators, pnQNd, ppdDH, ppnQNm);
 
 	for (i=0; i< nDim; i++)
@@ -1298,6 +1305,7 @@ void DHamilt( UINT nStateType,
 	free(ppnQNm);
 	free (ppdHbase);
 	free( pdIndicators );
+	free(pdOnes);
 }
 
 /* Intensity of a given transition */
