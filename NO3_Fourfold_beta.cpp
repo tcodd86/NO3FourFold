@@ -1270,17 +1270,22 @@ void DHamilt( UINT nStateType,
 	  UINT nDim;
 	  int lCN;
 	  lCN = ConNum(nStateType);
-	  pdIndicators = (double *)calloc(lCN , sizeof( double ) );
 
+	  pdIndicators = (double *)calloc(lCN , sizeof( double ) );
 	  pdOnes = (double *)calloc(lCN , sizeof(double));
 
 	  nDim = HamSize(nStateType,pnQNd);  /* Hamiltonian is (4*J+2)x(4*J+2) */
+
 	  for ( int i = 0; i < lCN; i++ )
       {
-          pdIndicators[i]=1.0;
-          pdOnes[i] = 1.0;
+          pdIndicators[i]=pdConst[i];
+          pdOnes[i]=pdConst[i];
+          //pdIndicators[i]=1.0;
+          //pdOnes[i] = 1.0;
       }
-	  pdIndicators[k] +=1.0;
+	  //pdIndicators[k] +=1.0;
+	  pdOnes[k] = 1.0;
+	  pdIndicators[k] = 2.0;
 	  ppnQNm = (int**)calloc( nDim, sizeof( int* ) );
 	  ppdHbase = (double**)calloc(nDim, sizeof(double*));
 
