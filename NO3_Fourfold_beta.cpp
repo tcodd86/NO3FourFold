@@ -1,14 +1,8 @@
-//#include "stdafx.h"
 #include "msdef.h"
 #include "mathutil.h"
 #include <malloc.h>
 #include <math.h>
 #include "model.h"
-//#include <iostream>
-//#include "ap.h"
-//#include "linalg.h"
-//#include "alglibinternal.h"
-//#include <fstream>
 using namespace std;
 
 
@@ -325,13 +319,28 @@ double FNK(int N, int K)
 double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
 {
     //taken from Hirota's book
-    double val = C(J, N) / (2 * N * (N + 1))*(Eaa * K * K + (Ebb + Ecc) * (N * (N + 1) - K * K) / 2);
+    //double val = C(J, N) / (2 * N * (N + 1))*(Eaa * K * K + (Ebb + Ecc) * (N * (N + 1) - K * K) / 2);
+
+    //try MWC's formulas
+    //double val = C(J, N) / 2.0 * (Ebb - (Ebb - Ecc)*K*K)/(N * (N + 1));
+
+    //Hirota's again with resimplification
+    double val = C(J, N) / (2 * N * (N + 1)) * (Ecc * K * K + Ebb * (N * ( N + 1) - K * K));
+
     return val;
 }
 
 double NminusOneSR(int N, int K, double Eaa, double Ebb, double Ecc)
 {
-    double val = K / (2 * N) * sqrt(N * N - K * K) * (Eaa - (Ebb + Ecc) / 2);
+    //From Hirota
+    //double val = K / (2 * N) * sqrt(N * N - K * K) * (Eaa - (Ebb + Ecc) / 2);
+
+    //try MWC's formulas
+    //double val = 0.5 * (Ebb - Ecc) * (K / (2 * N)) * sqrt(N * N - K * K);
+
+    //Hirota's again with resimplification
+    double val = K / (2 * N) * sqrt(N * N - K * K) * (Ebb - Ecc);
+
     return val;
 }
 
@@ -1049,8 +1058,8 @@ void Hamilt( UINT nStateType,
 		dEAOAT = pdConst[19];
 		dEAOE = pdConst[20];
 		Exx = pdConst[21];
-		Eyy = pdConst[22];
-		Ezz = pdConst[23];
+		Eyy = pdConst[21];
+		Ezz = pdConst[22];
 
 		DIM = 8*(pnQNd[0] + 1);
 		NK = DIM / 4;
@@ -1082,7 +1091,7 @@ void Hamilt( UINT nStateType,
 			//Vibronically Diagonal Elements First
 			if(Symm == 0)//means its A1
 			{
-				ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K) + DiagSR(N, K, Ezz, Exx, Eyy, JJ);//C.16
+				ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K) + DiagSR(N, K, Eyy, Exx, Ezz, JJ); //what I had originally for Hirota's formulas: DiagSR(N, K, Ezz, Exx, Eyy, JJ);//C.16
 			}
 			if(Symm == 1)//means its A2
 			{
@@ -1093,7 +1102,7 @@ void Hamilt( UINT nStateType,
 			    if(K < N && K > -1 * N)//means K isn't too large
                 {
                     int o = lReverseIndex(pnQNd, N - 1, K, Symm);
-                    ppdH[i][o] += NminusOneSR(N, K, Ezz, Exx, Eyy);
+                    ppdH[i][o] += NminusOneSR(N, K, Eyy, Exx, Ezz); //what I had originally for Hirota's formulas: NminusOneSR(N, K, Ezz, Exx, Eyy);
                     ppdH[o][i] = ppdH[i][o];
                 }
 			}
@@ -1821,7 +1830,7 @@ void Inten( int* pnCount,
 			  }//end loop over E+/E-
 		  }//end if bFlagBC
 
-		  LS = (double)((dJL+1)*(dJU+1))*sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
+		  LS = sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
 		  BF = exp(-(dLoStEnerg - EMIN)/(RK*pdParam[0]))-exp(-(dUpStEnerg - EMIN)/(RK*pdParam[0]));   /* Boltzmann factor */
 		  RINTE = ((int)pdParam[23]==0? 1 : NSSW(LoStQN[1], LoStQN[2])) * BF * LS;
 		  *(pnCount)++;
@@ -1831,5 +1840,168 @@ void Inten( int* pnCount,
 		  }
 		  return;
 	}//end if loState == onefold and excited state == fourfold
+
+    if(nLoStateType == 1 && nUpStateType == 1)
+    {
+		double dNorm, sum, BF, LS;
+		int f, dJL, dJU, DIM, uNL, uNH, j, coeff;
+		double static dWeightA, dWeightB, dWeightCsq, EMIN, RK, RINTE;
+		BOOL static bFlagA, bFlagBC;
+		//From model.c
+		  if (!*pbCont)
+		  {/* This Ground Level was the first one, so you should*/
+			  /* setup trap for various ladders. Keep in mind that */
+			  EMIN = dLoStEnerg; /* states are sorted and lowest*/
+			  *pbCont = TRUE;     /* are coming first. Here we have just one*/
+			  /* BOLTZMANN FACTOR hv/kt-->v/(k/h)t, k/h in Hz/K */
+			  RK = 1.380662E-23 / 6.626176E-34;
+			  RK = (pdParam[6] == 2.0)?RK * 1E-9:     /* GHz*/
+				  ((pdParam[6] == 1.0)?RK * 1E-6:RK * 1E-9 / 29.9792458 );
+					/*MHz               cm-1*/
+			  dNorm = fabs(pdParam[9]) + fabs(pdParam[10]) + fabs(pdParam[11]);
+			  dNorm = (dNorm==0.0)?1.0:dNorm;
+			  dWeightA = sqrt(fabs(pdParam[9])/dNorm);     /* weight of a-type transition intensities.*/
+			  dWeightB = sqrt(fabs(pdParam[10]/dNorm));   /* weight of b-typetransition intensities.*/
+			  dWeightCsq = fabs(pdParam[11]/dNorm);    /* weight of c-type transition intensities.*/
+			  bFlagA =  (dWeightA != 0.0);        /*ladder.*/
+			  bFlagBC = ( dWeightB!=0.0 || dWeightCsq!=0.0);
+		  }
+		  *fInten = 0.0f;
+		  sum = 0.0;
+		  dJL = *LoStQN;
+		  dJU = *UpStQN;
+		  f = abs(dJL - dJU);
+		  if(f > 3)//checks delta J = 0,+/- 1
+		  {
+			  return;
+		  }
+		  //DIM = 2*(LoStQN[0] + 1);//sets the bounds for the for loop over the GS EV components
+		  DIM = HamSize(1, LoStQN);
+		  idx LoStIndex;
+		  //First find out what N values are in the upper state based on it's J to make sure we don't get erroneous indices from lReverseIndex
+		  uNL = (UpStQN[0]-1)/2;
+		  uNH = (UpStQN[0]+1)/2;
+		  int upStateN;
+		  int upStateK;
+
+		  if(bFlagA)//C.32
+		  {
+			  for(int i = DIM / 4; i < DIM / 2; i++)//only loop over A2 levels since that's the ground state symmetry
+			  {
+				  LoStIndex = lIndex(LoStQN, i);// MWCIndex(LoStQN, i);
+				  //Now check for 3 possible components that the GS component can link with first checking to see if the bad QN's exist in the excited state and only check for A1 (Symm = 0)
+				  coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
+				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
+				  {
+				      upStateN = LoStIndex.N - 1;
+				      j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+                  }
+				  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.K != 0 && LoStIndex.N != 0)
+				  {
+				      upStateN = LoStIndex.N;
+					  coeff += 1;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+                  }
+				  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
+				  {
+				      upStateN = LoStIndex.N + 1;
+					  coeff += 2;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+                  }
+			  }//end for loop
+		  }//end if bFlagA == true
+
+		  if(bFlagBC)//C.39
+		  {
+			  int co = 0;
+			  for(int symm = 2; symm < 4; symm++)
+			  {
+				  for(int i = DIM / 4; i < DIM / 2; i++)//only loop over A2 levels
+				  {
+				      LoStIndex = lIndex(LoStQN, i);//MWCIndex(LoStQN, i);
+				      co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
+					  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
+					  {
+					      co *= -1;
+						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  {
+						      upStateK = LoStIndex.K - 1;
+							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K - 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;//coefficient in front of the 6J symbol
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K + 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+					  }
+
+					  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.N != 0)
+					  {
+						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K - 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K + 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+					  }
+
+					  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
+					  {
+					      co *= -1;
+						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K - 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K + 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+					  }//end if N+1 = uNL/uNH
+
+				  }//end loop over lostate wf
+			  }//end loop over E+/E-
+		  }//end if bFlagBC
+
+		  LS = sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
+		  BF = exp(-(dLoStEnerg - EMIN)/(RK*pdParam[0]))-exp(-(dUpStEnerg - EMIN)/(RK*pdParam[0]));   /* Boltzmann factor */
+		  RINTE = ((int)pdParam[23]==0? 1 : NSSW(LoStQN[1], LoStQN[2])) * BF * LS;
+		  *(pnCount)++;
+		  if((RINTE >= pdParam[3]))// && (dUpStEnerg>dLoStEnerg))
+		  {
+			  *fInten = (float)RINTE;
+		  }
+		  return;
+    }//end upstate == lowstate == 1
 
   }//end Inten function
