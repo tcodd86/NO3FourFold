@@ -9,7 +9,7 @@ using namespace std;
 /*** Local constant definitions ****/
 
 #define N_CONST_SINGLE	18
-#define N_CONST_TWOFOLD 23
+#define N_CONST_TWOFOLD 26
 #define MBASE			2
 #define N_VOLATILE_TWF  4
 #define N_EVSTATES      2
@@ -318,12 +318,6 @@ double FNK(int N, int K)
 
 double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
 {
-    //taken from Hirota's book
-    //double val = C(J, N) / (2 * N * (N + 1))*(Eaa * K * K + (Ebb + Ecc) * (N * (N + 1) - K * K) / 2);
-
-    //try MWC's formulas
-    //double val = C(J, N) / 2.0 * (Ebb - (Ebb - Ecc)*K*K)/(N * (N + 1));
-
     //Hirota's again with resimplification
     double val = C(J, N) / (2 * N * (N + 1)) * (Ecc * K * K + Ebb * (N * ( N + 1) - K * K));
 
@@ -332,14 +326,15 @@ double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
 
 double NminusOneSR(int N, int K, double Eaa, double Ebb, double Ecc)
 {
-    //From Hirota
-    //double val = K / (2 * N) * sqrt(N * N - K * K) * (Eaa - (Ebb + Ecc) / 2);
-
-    //try MWC's formulas
-    //double val = 0.5 * (Ebb - Ecc) * (K / (2 * N)) * sqrt(N * N - K * K);
-
     //Hirota's again with resimplification
     double val = K / (2 * N) * sqrt(N * N - K * K) * (Ebb - Ecc);
+
+    return val;
+}
+
+double CentDist(double DN, double DNK, double DK, int N, int K)
+{
+    double val = -1.0 * DN * N * N * (N + 1) * (N + 1) - DNK * N * (N + 1) * K * K - DK * K * K * K * K;
 
     return val;
 }
@@ -445,6 +440,9 @@ char* ConName( UINT nStateType, UINT nConst )
 		case 20 : return "Delta_E_A1_E";
 		case 21 : return "Epsilon_xxyy";//epsilon aa + bb
 		case 22 : return "Epsilon_zz";//epsilon cc
+		case 23 : return "DN";
+		case 24 : return "DNK";
+		case 25 : return "DK";
 		default : return "Constant";
 		}//end switch nConst
 	default : return "State"; //None of the defined
@@ -1031,7 +1029,7 @@ void Hamilt( UINT nStateType,
 	else if(nStateType == 1)//Dmitry's Hamiltonian
 	{
 		double BzzE, BzzAO, BzzAT, ByyE, ByyAO, ByyAT, BxxE, BxxAO, BxxAT, epsilon, zetaEt, zetaAAt, hAOE,
-			hATE, hE, azetaDE, azetaDAA, azetaD, bzzAOATzetat, dEAOAT, dEAOE, JJ, Exx, Eyy, Ezz;
+			hATE, hE, azetaDE, azetaDAA, azetaD, bzzAOATzetat, dEAOAT, dEAOE, JJ, Exx, Eyy, Ezz, DN, DK, D_NK;
 
 		int DIM, N, K, Par, Symm, dJ, NK, jj, coeff;
 		idx QN;
@@ -1060,6 +1058,9 @@ void Hamilt( UINT nStateType,
 		Exx = pdConst[21];
 		Eyy = pdConst[21];
 		Ezz = pdConst[22];
+		DN = pdConst[23];
+		D_NK = pdConst[24];
+		DK = pdConst[25];
 
 		DIM = 8*(pnQNd[0] + 1);
 		NK = DIM / 4;
@@ -1091,11 +1092,11 @@ void Hamilt( UINT nStateType,
 			//Vibronically Diagonal Elements First
 			if(Symm == 0)//means its A1
 			{
-				ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K) + DiagSR(N, K, Eyy, Exx, Ezz, JJ); //what I had originally for Hirota's formulas: DiagSR(N, K, Ezz, Exx, Eyy, JJ);//C.16
+				ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K) + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K); //what I had originally for Hirota's formulas: DiagSR(N, K, Ezz, Exx, Eyy, JJ);//C.16
 			}
 			if(Symm == 1)//means its A2
 			{
-				ppdH[i][i] += BzzAT * K * K + 0.5 * (BxxAT + ByyAT) * (N * (N + 1) - K * K) + dEAOAT + DiagSR(N, K, Ezz, Exx, Eyy, JJ);//C.16
+				ppdH[i][i] += BzzAT * K * K + 0.5 * (BxxAT + ByyAT) * (N * (N + 1) - K * K) + dEAOAT + DiagSR(N, K, Ezz, Exx, Eyy, JJ) + CentDist(DN, D_NK, DK, N, K);//C.16
 			}
 			if(Symm < 2 && dJ == 2 * N - 1)//means A1 or A2 and N is the larger of two values
 			{
@@ -1111,12 +1112,12 @@ void Hamilt( UINT nStateType,
 				if(dJ == 2 * N + 1)//means J = N + 1/2
 				{
 					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) - (2 * BzzE * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ);//C.15a
+						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a
 				}
 				else//for J = N - 1/2
 				{
 					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) + (2 * BzzE * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ);//C.15a
+						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a
 
 					//can only have the matrix element with bra N - 1 here since it means ket's N is higher
 					if(K < N && K > -1 * N)//first check to see if K value is not too large or small to be found in N - 1 set

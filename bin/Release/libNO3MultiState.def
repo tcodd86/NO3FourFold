@@ -45,9 +45,10 @@ EXPORTS
     _Z5lfabsd @44
     _Z6DiagSRiidddd @45
     _Z6lIndexPii @46
-    _Z8MWCIndexPii @47
-    c_ @48
-    cg_ @49
-    del_ @50
-    flog_ @51
-    w_ @52
+    _Z8CentDistdddii @47
+    _Z8MWCIndexPii @48
+    c_ @49
+    cg_ @50
+    del_ @51
+    flog_ @52
+    w_ @53
