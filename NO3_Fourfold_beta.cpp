@@ -1,21 +1,15 @@
-//#include "stdafx.h"
 #include "msdef.h"
 #include "mathutil.h"
 #include <malloc.h>
 #include <math.h>
 #include "model.h"
-//#include <iostream>
-//#include "ap.h"
-//#include "linalg.h"
-//#include "alglibinternal.h"
-//#include <fstream>
 using namespace std;
 
 
 /*** Local constant definitions ****/
 
 #define N_CONST_SINGLE	18
-#define N_CONST_TWOFOLD 21
+#define N_CONST_TWOFOLD 26
 #define MBASE			2
 #define N_VOLATILE_TWF  4
 #define N_EVSTATES      2
@@ -314,6 +308,7 @@ UINT StatWeight(UINT nLoStateType, int* LoStQN, double* pdParam)
 
 double lfabs(double x) {return (x<0.0)? -x:x;}
 
+//functions I use in my Hamiltonian
 double FNK(int N, int K)
 {
 	double n = N;
@@ -321,6 +316,28 @@ double FNK(int N, int K)
 	return sqrt(n * (n + 1) - k * (k + 1));
 }
 
+double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
+{
+    //Hirota's again with resimplification
+    double val = C(J, N) / (2 * N * (N + 1)) * (Ecc * K * K + Ebb * (N * ( N + 1) - K * K));
+
+    return val;
+}
+
+double NminusOneSR(int N, int K, double Eaa, double Ebb, double Ecc)
+{
+    //Hirota's again with resimplification
+    double val = K / (2 * N) * sqrt(N * N - K * K) * (Ebb - Ecc);
+
+    return val;
+}
+
+double CentDist(double DN, double DNK, double DK, int N, int K)
+{
+    double val = -1.0 * DN * N * N * (N + 1) * (N + 1) - DNK * N * (N + 1) * K * K - DK * K * K * K * K;
+
+    return val;
+}
 
 /* Model Name */
 char* Name()
@@ -421,6 +438,11 @@ char* ConName( UINT nStateType, UINT nConst )
 		case 18 : return "BzzA1A2_zeta_t_A1A2";
 		case 19 : return "Delta_E_A1_A2";
 		case 20 : return "Delta_E_A1_E";
+		case 21 : return "Epsilon_xxyy";//epsilon aa + bb
+		case 22 : return "Epsilon_zz";//epsilon cc
+		case 23 : return "DN";
+		case 24 : return "DNK";
+		case 25 : return "DK";
 		default : return "Constant";
 		}//end switch nConst
 	default : return "State"; //None of the defined
@@ -452,12 +474,13 @@ void InitCo( UINT nStateType, double* pdConst )
 		pdConst[0] = 0.21;//Bzz  A1
 		pdConst[1] = 0.43;//Byy  A1
 		pdConst[2] = 0.43;//Bxx  A1
-		pdConst[3] = 0.21;//Bzz  A2
-		pdConst[4] = 0.43;//Byy  A2
-		pdConst[5] = 0.43;//Bxx  A2
-		pdConst[6] = 0.21;//Bzz  E
-		pdConst[7] = 0.43;//Byy  E
-		pdConst[8] = 0.43;//Bxx  E
+		pdConst[3] = 0.0;//Bzz  A2
+		pdConst[4] = 0.0;//Byy  A2
+		pdConst[5] = 0.0;//Bxx  A2
+		pdConst[6] = 0.0;//Bzz  E
+		pdConst[7] = 0.0;//Byy  E
+		pdConst[8] = 0.0;//Bxx  E
+		pdConst[21] = 0.015;
 		return;
 	}
 }
@@ -821,6 +844,7 @@ void Assign( UINT nStateType, double* pdStWF, int* StQN, int StNum )
 
 	if(nStateType == 1)//Working assignment function for Fourfold states
 	{
+	    int j = 0;
 		idx QN;
 		int id, DIM;
 		DIM = 8*(StQN[0] + 1);
@@ -848,7 +872,6 @@ UINT HamSize( UINT nStateType, int* pnQNd )
 {
   return (nStateType==1)? 8*(pnQNd[0] + 1): 2*(pnQNd[0] + 1);  /* number-of-ev-states*2*(2J+1), changed to 8* for nStateType = 1*/
 }
-
 
 /* Building Hamiltonian blocks for a given J, includes code for all supported states*/
 void Hamilt( UINT nStateType,
@@ -1006,7 +1029,7 @@ void Hamilt( UINT nStateType,
 	else if(nStateType == 1)//Dmitry's Hamiltonian
 	{
 		double BzzE, BzzAO, BzzAT, ByyE, ByyAO, ByyAT, BxxE, BxxAO, BxxAT, epsilon, zetaEt, zetaAAt, hAOE,
-			hATE, hE, azetaDE, azetaDAA, azetaD, bzzAOATzetat, dEAOAT, dEAOE, JJ;
+			hATE, hE, azetaDE, azetaDAA, azetaD, bzzAOATzetat, dEAOAT, dEAOE, JJ, Exx, Eyy, Ezz, DN, DK, D_NK;
 
 		int DIM, N, K, Par, Symm, dJ, NK, jj, coeff;
 		idx QN;
@@ -1032,6 +1055,12 @@ void Hamilt( UINT nStateType,
 		bzzAOATzetat = pdConst[18];
 		dEAOAT = pdConst[19];
 		dEAOE = pdConst[20];
+		Exx = pdConst[21];
+		Eyy = pdConst[21];
+		Ezz = pdConst[22];
+		DN = pdConst[23];
+		D_NK = pdConst[24];
+		DK = pdConst[25];
 
 		DIM = 8*(pnQNd[0] + 1);
 		NK = DIM / 4;
@@ -1063,29 +1092,38 @@ void Hamilt( UINT nStateType,
 			//Vibronically Diagonal Elements First
 			if(Symm == 0)//means its A1
 			{
-				ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K);//C.16
+				ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K) + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K); //what I had originally for Hirota's formulas: DiagSR(N, K, Ezz, Exx, Eyy, JJ);//C.16
 			}
 			if(Symm == 1)//means its A2
 			{
-				ppdH[i][i] += BzzAT * K * K + 0.5 * (BxxAT + ByyAT) * (N * (N + 1) - K * K) + dEAOAT;//C.16
+				ppdH[i][i] += BzzAT * K * K + 0.5 * (BxxAT + ByyAT) * (N * (N + 1) - K * K) + dEAOAT + DiagSR(N, K, Ezz, Exx, Eyy, JJ) + CentDist(DN, D_NK, DK, N, K);//C.16
+			}
+			if(Symm < 2 && dJ == 2 * N - 1)//means A1 or A2 and N is the larger of two values
+			{
+			    if(K < N && K > -1 * N)//means K isn't too large
+                {
+                    int o = lReverseIndex(pnQNd, N - 1, K, Symm);
+                    ppdH[i][o] += NminusOneSR(N, K, Eyy, Exx, Ezz); //what I had originally for Hirota's formulas: NminusOneSR(N, K, Ezz, Exx, Eyy);
+                    ppdH[o][i] = ppdH[i][o];
+                }
 			}
 			if(Symm > 1)//means its E
 			{
 				if(dJ == 2 * N + 1)//means J = N + 1/2
 				{
 					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) - (2 * BzzE * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE;//C.15a
+						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a
 				}
 				else//for J = N - 1/2
 				{
 					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) + (2 * BzzE * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE;//C.15a
+						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a
 
 					//can only have the matrix element with bra N - 1 here since it means ket's N is higher
 					if(K < N && K > -1 * N)//first check to see if K value is not too large or small to be found in N - 1 set
 					{
 						jj = lReverseIndex(pnQNd, N - 1, K, Symm);
-						ppdH[jj][i] += -1 * (azetaDE * sqrt((double)(N * N) - (double)(K * K))/(dJ + 1));//i + N - 1 should put me at same K for smaller N value ----C.15b
+						ppdH[jj][i] += -1 * (azetaDE * sqrt((double)(N * N) - (double)(K * K))/(dJ + 1)) + NminusOneSR(N, K, Ezz, Exx, Eyy);//i + N - 1 should put me at same K for smaller N value ----C.15b
 						ppdH[i][jj] = ppdH[jj][i];//since H is symmetric C.15b
 					}
 				}//end else
@@ -1237,16 +1275,27 @@ void DHamilt( UINT nStateType,
 {
 
 	  UINT i, j;
-	  double *pdIndicators, **ppdHbase;
+	  double *pdIndicators, **ppdHbase, *pdOnes;
 	  int **ppnQNm;
 	  UINT nDim;
 	  int lCN;
 	  lCN = ConNum(nStateType);
+
 	  pdIndicators = (double *)calloc(lCN , sizeof( double ) );
+	  pdOnes = (double *)calloc(lCN , sizeof(double));
 
 	  nDim = HamSize(nStateType,pnQNd);  /* Hamiltonian is (4*J+2)x(4*J+2) */
-	  for ( int i = 0; i < lCN; i++ ) pdIndicators[i]=1.0;
-	  pdIndicators[k] +=1.0;
+
+	  for ( int i = 0; i < lCN; i++ )
+      {
+          pdIndicators[i]=pdConst[i];
+          pdOnes[i]=pdConst[i];
+          //pdIndicators[i]=1.0;
+          //pdOnes[i] = 1.0;
+      }
+	  //pdIndicators[k] +=1.0;
+	  pdOnes[k] = 1.0;
+	  pdIndicators[k] = 2.0;
 	  ppnQNm = (int**)calloc( nDim, sizeof( int* ) );
 	  ppdHbase = (double**)calloc(nDim, sizeof(double*));
 
@@ -1255,7 +1304,8 @@ void DHamilt( UINT nStateType,
 		ppnQNm[i] = (int*)calloc( QNnumB(nStateType), sizeof(int) );
 		ppdHbase[i] = (double*)calloc( nDim, sizeof(double));
 	  }
-	Hamilt (nStateType, pdConst, pnQNd, ppdHbase, ppnQNm);
+	//Hamilt (nStateType, pdConst, pnQNd, ppdHbase, ppnQNm);
+	Hamilt (nStateType, pdOnes, pnQNd, ppdHbase, ppnQNm);
 	Hamilt( nStateType, pdIndicators, pnQNd, ppdDH, ppnQNm);
 
 	for (i=0; i< nDim; i++)
@@ -1270,6 +1320,7 @@ void DHamilt( UINT nStateType,
 	free(ppnQNm);
 	free (ppdHbase);
 	free( pdIndicators );
+	free(pdOnes);
 }
 
 /* Intensity of a given transition */
@@ -1681,19 +1732,26 @@ void Inten( int* pnCount,
 				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N - 1;
+				      j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 				  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.K != 0 && LoStIndex.N != 0)
 				  {
 				      upStateN = LoStIndex.N;
 					  coeff += 1;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 				  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N + 1;
 					  coeff += 2;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
-				  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-				  sum += pow(-1.0, (double)coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N) * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
 			  }//end for loop
 		  }//end if bFlagA == true
 
@@ -1773,15 +1831,178 @@ void Inten( int* pnCount,
 			  }//end loop over E+/E-
 		  }//end if bFlagBC
 
-		  LS = (dJL+1)*(dJU+1)*sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
+		  LS = sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
 		  BF = exp(-(dLoStEnerg - EMIN)/(RK*pdParam[0]))-exp(-(dUpStEnerg - EMIN)/(RK*pdParam[0]));   /* Boltzmann factor */
 		  RINTE = ((int)pdParam[23]==0? 1 : NSSW(LoStQN[1], LoStQN[2])) * BF * LS;
 		  *(pnCount)++;
-		  if((RINTE >= pdParam[3]) && (dUpStEnerg>dLoStEnerg))
+		  if((RINTE >= pdParam[3]))// && (dUpStEnerg>dLoStEnerg))
 		  {
 			  *fInten = (float)RINTE;
 		  }
 		  return;
 	}//end if loState == onefold and excited state == fourfold
+
+    if(nLoStateType == 1 && nUpStateType == 1)
+    {
+		double dNorm, sum, BF, LS;
+		int f, dJL, dJU, DIM, uNL, uNH, j, coeff;
+		double static dWeightA, dWeightB, dWeightCsq, EMIN, RK, RINTE;
+		BOOL static bFlagA, bFlagBC;
+		//From model.c
+		  if (!*pbCont)
+		  {/* This Ground Level was the first one, so you should*/
+			  /* setup trap for various ladders. Keep in mind that */
+			  EMIN = dLoStEnerg; /* states are sorted and lowest*/
+			  *pbCont = TRUE;     /* are coming first. Here we have just one*/
+			  /* BOLTZMANN FACTOR hv/kt-->v/(k/h)t, k/h in Hz/K */
+			  RK = 1.380662E-23 / 6.626176E-34;
+			  RK = (pdParam[6] == 2.0)?RK * 1E-9:     /* GHz*/
+				  ((pdParam[6] == 1.0)?RK * 1E-6:RK * 1E-9 / 29.9792458 );
+					/*MHz               cm-1*/
+			  dNorm = fabs(pdParam[9]) + fabs(pdParam[10]) + fabs(pdParam[11]);
+			  dNorm = (dNorm==0.0)?1.0:dNorm;
+			  dWeightA = sqrt(fabs(pdParam[9])/dNorm);     /* weight of a-type transition intensities.*/
+			  dWeightB = sqrt(fabs(pdParam[10]/dNorm));   /* weight of b-typetransition intensities.*/
+			  dWeightCsq = fabs(pdParam[11]/dNorm);    /* weight of c-type transition intensities.*/
+			  bFlagA =  (dWeightA != 0.0);        /*ladder.*/
+			  bFlagBC = ( dWeightB!=0.0 || dWeightCsq!=0.0);
+		  }
+		  *fInten = 0.0f;
+		  sum = 0.0;
+		  dJL = *LoStQN;
+		  dJU = *UpStQN;
+		  f = abs(dJL - dJU);
+		  if(f > 3)//checks delta J = 0,+/- 1
+		  {
+			  return;
+		  }
+		  //DIM = 2*(LoStQN[0] + 1);//sets the bounds for the for loop over the GS EV components
+		  DIM = HamSize(1, LoStQN);
+		  idx LoStIndex;
+		  //First find out what N values are in the upper state based on it's J to make sure we don't get erroneous indices from lReverseIndex
+		  uNL = (UpStQN[0]-1)/2;
+		  uNH = (UpStQN[0]+1)/2;
+		  int upStateN;
+		  int upStateK;
+
+		  if(bFlagA)//C.32
+		  {
+			  for(int i = DIM / 4; i < DIM / 2; i++)//only loop over A2 levels since that's the ground state symmetry
+			  {
+				  LoStIndex = lIndex(LoStQN, i);// MWCIndex(LoStQN, i);
+				  //Now check for 3 possible components that the GS component can link with first checking to see if the bad QN's exist in the excited state and only check for A1 (Symm = 0)
+				  coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
+				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
+				  {
+				      upStateN = LoStIndex.N - 1;
+				      j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+                  }
+				  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.K != 0 && LoStIndex.N != 0)
+				  {
+				      upStateN = LoStIndex.N;
+					  coeff += 1;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+                  }
+				  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
+				  {
+				      upStateN = LoStIndex.N + 1;
+					  coeff += 2;
+					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+                  }
+			  }//end for loop
+		  }//end if bFlagA == true
+
+		  if(bFlagBC)//C.39
+		  {
+			  int co = 0;
+			  for(int symm = 2; symm < 4; symm++)
+			  {
+				  for(int i = DIM / 4; i < DIM / 2; i++)//only loop over A2 levels
+				  {
+				      LoStIndex = lIndex(LoStQN, i);//MWCIndex(LoStQN, i);
+				      co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
+					  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
+					  {
+					      co *= -1;
+						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  {
+						      upStateK = LoStIndex.K - 1;
+							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K - 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;//coefficient in front of the 6J symbol
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K + 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+					  }
+
+					  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.N != 0)
+					  {
+						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K - 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K + 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+					  }
+
+					  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
+					  {
+					      co *= -1;
+						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K - 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  {
+							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K + 1, symm);
+							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
+								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						  }
+					  }//end if N+1 = uNL/uNH
+
+				  }//end loop over lostate wf
+			  }//end loop over E+/E-
+		  }//end if bFlagBC
+
+		  LS = sum*sum; /* "Line strength" multiplies square of the MAG(nitude) by (2J'+1)(2J"+1) */
+		  BF = exp(-(dLoStEnerg - EMIN)/(RK*pdParam[0]))-exp(-(dUpStEnerg - EMIN)/(RK*pdParam[0]));   /* Boltzmann factor */
+		  RINTE = ((int)pdParam[23]==0? 1 : NSSW(LoStQN[1], LoStQN[2])) * BF * LS;
+		  *(pnCount)++;
+		  if((RINTE >= pdParam[3]))// && (dUpStEnerg>dLoStEnerg))
+		  {
+			  *fInten = (float)RINTE;
+		  }
+		  return;
+    }//end upstate == lowstate == 1
 
   }//end Inten function
