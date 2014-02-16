@@ -44,28 +44,18 @@ int P;
   SPIN-ROTATIONAL INTERACTIONS AND CENTRIFUGAL DISTORTION PARAMETERS.
 
   THIS MODEL INCLUDES MING-WEI CHEN'S (MWC) OBLATE SYMMETRIC TOP HAMILTONIAN
-  WITH SPIN ROTATION AND CENTRIFUGAL DISTORTION AS A SUBSET.
+  WITH SPIN ROTATION AND CENTRIFUGAL DISTORTION AS A SUBSET. HIS ORIGINAL CODE
+  IS USED WITHOUT MODIFICATION WITH HIS PERMISSION. WHERE HIS CODE IS USED IT IS
+  LABELED AS 'MWC'.
 
   TRANSITIONS BETWEEN LOWER STATE A2 LEVELS (MWC'S HAM) AND EXCITED
   STATE FOURFOLD STATES MAY BE CALCULATED.  ADDITIONALLY ALL
   TRANSITIONS THAT MAY BE CALCULATED BY MWC'S HAMILTONIAN MAY ALSO
   BE CALCULATED HERE.
 
-  05-21-2013
-  First debug tried with limited transitions calculable.---TC
-
-  07-01-2013
-  Henry checked the matrix elements and identified errors---TC
-
-  07-09-2013
-  Corrected it so all off-diagonal elements are set as +=, not =, since
-	some may overlap diagonal elements accidentally.
-  Corrected a small error in C.22 selection rules.
-  Corrected conditions for parallel transitions intensities with dN = 0.
-  Added intensity function for perpendicular transitions from singlefold
-	to fourfold states
-  Changed model name from NO3_alpha to NO3_Fourfold_beta
-
+  MANY OF THE SHORTCUT FUNCTIONS AND EXPLANATORY COMMENTS WERE WRITTEN BY
+  DMITRY MELNIK. THESE ARE LEFT IN PLACE BECAUSE IT WAS HIS TWO-FOLD MODEL
+  THAT WAS USED AS A TEMPLATE FOR THE FOURFOLD MODEL.
   **********************************************************************
 */
 
@@ -318,7 +308,7 @@ double FNK(int N, int K)
 
 double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
 {
-    //Hirota's again with resimplification
+    //Hirota's with resimplification
     double val = C(J, N) / (2 * N * (N + 1)) * (Ecc * K * K + Ebb * (N * ( N + 1) - K * K));
 
     return val;
@@ -326,7 +316,7 @@ double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
 
 double NminusOneSR(int N, int K, double Eaa, double Ebb, double Ecc)
 {
-    //Hirota's again with resimplification
+    //Hirota's with resimplification
     double val = K / (2 * N) * sqrt(N * N - K * K) * (Ebb - Ecc);
 
     return val;
@@ -346,10 +336,9 @@ char* Name()
 }
 
 /*-------------------------State types-------------------------*/
-/* Number of state types. The actual number of the state types is 2, however
-by specifying A' and A" isolated states as separate types we can automatically
-take their symmetry properties into account by selectively applying the components
-of the transition moment in intensity calculations.*/
+/* Number of state types. The actual number of the state types is 2:
+the singlefold oblate symmetric top state (from Ming Wei Chen) and
+the fourfold degenerate state*/
 UINT StaNum()
 {
   return 2;
@@ -368,9 +357,8 @@ char* StName( UINT nStateType )
 }
 
 /*--------------------------Constants--------------------------*/
-/* Number of constants in a given state type. A' and A" states have 10 constants each and
-twofold has 2x10 plus magnitudes of SO and Cor parameters, tilt angle, total separation
-Delta E = E(A')-E(A")*/
+/* Number of constants in a given state type. Constants are defined
+above.*/
 UINT ConNum( UINT nStateType )
 {
 	switch(nStateType)
@@ -384,7 +372,7 @@ UINT ConNum( UINT nStateType )
 
 }
 
-/* Constant names; A' and A" isolated states have identically named constants */
+/* Constant names*/
 char* ConName( UINT nStateType, UINT nConst )
 {
 	switch(nStateType)
@@ -593,7 +581,7 @@ char* QNName( UINT nStateType, UINT nQNumb )
 }
 
 /* All Quantum Numbers are stored as integer, but we should know when
-   they actually half integer. In that case we store doubled value and
+   they are actually half integer. In that case we store doubled value and
    base is "2" */
 UINT QNBase( UINT nStateType, UINT nQN )
 {
@@ -602,14 +590,14 @@ UINT QNBase( UINT nStateType, UINT nQN )
 	case 0 :
 		switch (nQN)//j is half integer
 		{
-		case 0 : return MBASE;//Dmitry has this stored as 2
+		case 0 : return MBASE;//For J
 		case 3 : return MBASE;//for parity in MWC's model
 		default : return 1;
 		}
 	case 1 :
 		switch(nQN)
 		{
-		case 0 : return MBASE;
+		case 0 : return MBASE;//For J
 		default : return 1;
 		}
 	}
@@ -621,7 +609,7 @@ void StartQN( UINT nStateType, int* pnQNd )
 }
 
 /* The quantum number loop iteration (continue) condition. The Jmax value is specified in
-as integer, which is no big deal since it only sets the limit, but for comparison purpose
+as an integer, which is no big deal since it only sets the limit, but for comparison purpose
 we need to convert it to doubled form.*/
 BOOL ContQN( UINT nStateType, int* pnQNd, double* pdParam )
 {
@@ -635,12 +623,13 @@ void NextQN( UINT nStateType, int* pnQNd, double* pdParam )
   return;
 }
 
-/* OK. As you could have noticed that the twofold model is fairly involved in terms of the quantum number
-indexing, ESPECIALLY in case "b" where J+1/2 and J-1/2 subblocks are not of the same size. Therefore,
-to facilitate calculation of the matrix elements and inserting them into the matrix properly, we will
-write two book-keeping functions, one of which translates the linear array index i or j into the
+/* Because the fourfold model is fairly involved in terms of the quantum number
+indexing. Therefore, to facilitate calculation of the matrix elements and inserting them into the matrix properly, we will
+write two book-keeping functions. One translates the linear array index i or j into the
 set of quantum numbers that the row or column corresponds to, and the other function does the opposite
-thing, i.e. identifies i or j by the set of quantum numbers. */
+thing, i.e. identifies i or j by the set of quantum numbers. By writing this into a single
+function we avoid possible errors in the Hamiltonian function due to improper calculation of
+the off-diagonal elements.*/
 
 idx lIndex(int *pnQNd, int nx)
 {
@@ -722,7 +711,7 @@ int lReverseIndex(int *pnQNd, int N, int K, int Symm)
 }
 
 /*------------------------Main Part------------------------*/
-/* Assign() function is not required for the model operation but it helps to give meaningful
+/* Assign() function is not required for the model to operate but it helps to give meaningful
 assignments. IMPORTANT NOTE: in this model assigment is given in terms of Wang components,
 therefore K assumes only non-negative values. If such an assignment is implemented, DO NOT
 use the MaxDltK option at all, since this will confuse the core and will result in
@@ -730,9 +719,7 @@ missing transitions. Also, in this program the symmetry labels will be given to 
 eigenvectors, which currently are not used anywhere except in the user-end output.*/
 
 /* NOTE 2: one of the issues is that the mechanism implemented in Specview deals with one
-eigenvector at a time, whereas the algorithm implemented in Mathematica version and in
-my earlier program for fitting methoxy analyzes the entire J-subblock preventing
-duplicate assignments. In weakly coupled systems this won't be the issue, however it is
+eigenvector at a time. In weakly coupled systems this won't be an issue, however it is
 not clear how the assignment (labeling) function will behave in near-degenerate cases. */
 
 void Assign( UINT nStateType, double* pdStWF, int* StQN, int StNum )
@@ -1026,7 +1013,7 @@ void Hamilt( UINT nStateType,
 	}
 	}//end of nStateType == 0
 
-	else if(nStateType == 1)//Dmitry's Hamiltonian
+	else if(nStateType == 1)//Fourfold Hamiltonian
 	{
 		double BzzE, BzzAO, BzzAT, ByyE, ByyAO, ByyAT, BxxE, BxxAO, BxxAT, epsilon, zetaEt, zetaAAt, hAOE,
 			hATE, hE, azetaDE, azetaDAA, azetaD, bzzAOATzetat, dEAOAT, dEAOE, JJ, Exx, Eyy, Ezz, DN, DK, D_NK;
@@ -1842,7 +1829,7 @@ void Inten( int* pnCount,
 		  return;
 	}//end if loState == onefold and excited state == fourfold
 
-    if(nLoStateType == 1 && nUpStateType == 1)
+    if(nLoStateType == 1 && nUpStateType == 1)//means both states are fourfold
     {
 		double dNorm, sum, BF, LS;
 		int f, dJL, dJU, DIM, uNL, uNH, j, coeff;
