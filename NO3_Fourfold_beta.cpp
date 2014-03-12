@@ -1763,7 +1763,7 @@ void Inten( int* pnCount,
 				  for(int i = 0; i < DIM; i++)
 				  {
 				      LoStIndex = MWCIndex(LoStQN, i);
-				      //co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
+				      co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
 					  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 					  {
 					      upStateN = LoStIndex.N - 1;
