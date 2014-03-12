@@ -1322,6 +1322,19 @@ void DHamilt( UINT nStateType,
 	free(pdOnes);
 }
 
+double perpIntensity(int i, int* UpStQN, int* LoStQN, idx LoStIndex, int symm, int UpStateK, int UpStateN, double* pdLoStWF, double* pdUpStWF, double dWeightB)
+{
+      int j = lReverseIndex(UpStQN, UpStateN, UpStateK, symm);
+      double coeff = pow(-1.0, (double)(UpStQN[0] + 1) / 2.0 + (double)UpStateK) / sqrt(2.0);
+      double SixJ = TDM6J(UpStQN[0], UpStateN, LoStQN[0], LoStIndex.N);
+      double ThreeJ_One = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, LoStIndex.K, 1);
+      double ThreeJ_Two = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, -1 * LoStIndex.K, 1);
+      double jjnn = JJNN(UpStQN[0], LoStQN[0], UpStateN, LoStIndex.N);
+      double coeff_Two = pow(-1.0, LoStIndex.N - LoStIndex.K + 2.0 + 2.0 + symm - 1.0);//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+      double intensity = jjnn * coeff * SixJ * (ThreeJ_One + coeff_Two * ThreeJ_Two);
+      return intensity;
+  }//end perIntensity function
+
 /* Intensity of a given transition */
 void Inten( int* pnCount,
 	    BOOL* pbCont,
@@ -1762,94 +1775,89 @@ void Inten( int* pnCount,
 				  for(int i = 0; i < DIM; i++)
 				  {
 				      LoStIndex = MWCIndex(LoStQN, i);
-				      co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
+				      //co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
 					  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 					  {
+					      upStateN = LoStIndex.N - 1;
 					      co *= -1;
-						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  //if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  if(LoStIndex.K - 1 >= upStateN * -1)
 						  {
 						      upStateK = LoStIndex.K - 1;
-							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K - 1, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;//coefficient in front of the 6J symbol
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
-								  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						      sum += perpIntensity(i, UpStQN, LoStQN, LoStIndex, symm, upStateK, upStateN, pdLoStWF, pdUpStWF, dWeightB);
+							  //j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K - 1, symm);
+							  //coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;//coefficient in front of the 6J symbol
+							  //sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
+								//  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								//  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
 						  }
-						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  //if(LoStIndex.K + 1 <= LoStIndex.N)
+						  if(LoStIndex.K + 1 <= upStateN)//I think this is the key!!!!!!!!!!!!
 						  {
-							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K + 1, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
-								  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						      upStateK = LoStIndex.K + 1;
+						      sum += perpIntensity(i, UpStQN, LoStQN, LoStIndex, symm, upStateK, upStateN, pdLoStWF, pdUpStWF, dWeightB);
+							  //j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K + 1, symm);
+							  //coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  //sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
+								//  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								//  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
 						  }
-						  /*
-							  j = lReverseIndex(UpStQN, LoStIndex.N - 1, LoStIndex.K, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N - 1) * TDM6J(UpStQN[0], LoStIndex.N - 1, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
-								  * TDM3J(LoStIndex.N - 1, -1 * (LoStIndex.K), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
-								  */
 
-					  }
+					  }//end delta N = -1
 
-					  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.N != 0)
+					  if((LoStIndex.N == uNL || LoStIndex.N == uNH) && LoStIndex.N != 0)
 					  {
-						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+					      upStateN = LoStIndex.N;
+						  //if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  if(LoStIndex.K - 1 >= upStateN * -1)
 						  {
-							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K - 1, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
-								  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						      upStateK = LoStIndex.K - 1;
+						      sum += perpIntensity(i, UpStQN, LoStQN, LoStIndex, symm, upStateK, upStateN, pdLoStWF, pdUpStWF, dWeightB);
+							  //j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K - 1, symm);
+							  //coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
+							  //sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
+								//  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								//  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
 						  }
-						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  //if(LoStIndex.K + 1 <= LoStIndex.N)
+						  if(LoStIndex.K + 1 <= upStateN)
 						  {
-							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K + 1, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
-								  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						      upStateK = LoStIndex.N + 1;
+						      sum += perpIntensity(i, UpStQN, LoStQN, LoStIndex, symm, upStateK, upStateN, pdLoStWF, pdUpStWF, dWeightB);
+							  //j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K + 1, symm);
+							  //coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  //sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
+								//  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
+								//  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
 						  }
-						  //try adding this to all three cases
-						  /*
-							  j = lReverseIndex(UpStQN, LoStIndex.N, LoStIndex.K, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N) * TDM6J(UpStQN[0], LoStIndex.N, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N, -1 * (LoStIndex.K), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)
-								  * TDM3J(LoStIndex.N, -1 * (LoStIndex.K), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
-								  */
-
-					  }
+					  }//end delta N = 0
 
 					  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
 					  {
-					      co *= -1;
-						  if(LoStIndex.K - 1 >= LoStIndex.N * -1)
+					      upStateN = LoStIndex.N + 1;
+						  //(LoStIndex.K - 1 >= LoStIndex.N * -1)
+						  if(LoStIndex.K - 1 >= upStateN * -1)
 						  {
-							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K - 1, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
-								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						      upStateK = LoStIndex.K - 1;
+						      sum += perpIntensity(i, UpStQN, LoStQN, LoStIndex, symm, upStateK, upStateN, pdLoStWF, pdUpStWF, dWeightB);
+							  //j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K - 1, symm);
+							  //coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K - 1;
+							  //sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
+								//  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								//  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K - 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
 						  }
-						  if(LoStIndex.K + 1 <= LoStIndex.N)
+						  //if(LoStIndex.K + 1 <= LoStIndex.N)
+						  if(LoStIndex.K + 1 <= upStateN)
 						  {
-							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K + 1, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
-								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
+						      upStateK = LoStIndex.K + 1;
+						      sum += perpIntensity(i, UpStQN, LoStQN, LoStIndex, symm, upStateK, upStateN, pdLoStWF, pdUpStWF, dWeightB);
+							  //j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K + 1, symm);
+							  //coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K + 1;
+							  //sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
+								//  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
+								//  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K + 1), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
 						  }
-						  //added this to all three cases
-						  /*
-							  j = lReverseIndex(UpStQN, LoStIndex.N + 1, LoStIndex.K, symm);
-							  coeff = (UpStQN[0] + 1) / 2 + LoStIndex.K;
-							  sum += pow(-1.0, coeff) / sqrt(2.0) * JJNN(UpStQN[0], LoStQN[0], LoStIndex.N, LoStIndex.N + 1) * TDM6J(UpStQN[0], LoStIndex.N + 1, LoStQN[0], LoStIndex.N)
-								  * co * (TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K), LoStIndex.N, LoStIndex.K, 1) + pow(-1.0, LoStIndex.N - LoStIndex.K + symm - 1 + 2.0 + 2.0)//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
-								  * TDM3J(LoStIndex.N + 1, -1 * (LoStIndex.K), LoStIndex.N, -1 * LoStIndex.K, 1)) * pdLoStWF[i] * pdUpStWF[j] * dWeightB;
-						  */
-					  }//end if N+1 = uNL/uNH
+					  }//end delta N = +1
 
 				  }//end loop over lostate wf
 			  }//end loop over E+/E-
@@ -2030,17 +2038,4 @@ void Inten( int* pnCount,
     }//end upstate == lowstate == 1
 
   }//end Inten function
-
-  private double perpIntensity(int i, int* UpStQN, int* LoStQN, idx LoStIndex, int symm, int UpStateK, int UpStateN, double* pdLoStWF, double* pdUpStWF, double dWeightB)
-  {
-      int j = lReverseIndex(UpStQN, UpStateN, UpStateK, symm);
-      double coeff = pow(-1.0, (double)(UpStQN[0] + 1) / 2.0 + (double)UpStateK) / sqrt(2.0);
-      double SixJ = TDM6J(UpStQN[0], UpStateN, LoStQN[0], LoStIndex.N);
-      double ThreeJ_One = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, LoStIndex.K, 1);
-      double ThreeJ_Two = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, -1 * LoStIndex.K, 1);
-      double jjnn = JJNN(UpStQN[0], LoStQN[0], UpStateN, LoStIndex.N);
-      double coeff_Two = pow(-1.0, LoStIndex.N - LoStIndex.K + 2.0 + 2.0 + symm - 1.0);//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
-      double intensity = jjnn * coeff * SixJ * (ThreeJ_One + coeff_Two * ThreeJ_Two);
-      return intensity;
-  }//end perIntensity function
-  }
+  //}
