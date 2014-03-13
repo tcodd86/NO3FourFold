@@ -1330,10 +1330,12 @@ double parIntensity(int i, int* UpStQN, int* LoStQN, idx LoStIndex, int UpStateN
 {
     int j = lReverseIndex(UpStQN, UpStateN, LoStIndex.K, 0);//zero for symm because all are A1 levels
     double coeff = -1.0 * pow(-1.0, (double)LoStIndex.K + ((double)UpStQN[0] + 1.0) / 2.0);
+    double co = pow(-1.0, LoStIndex.N + UpStateN + 1);
     double jjnn = JJNN(UpStQN[0], LoStQN[0], UpStateN, LoStIndex.N);
     double SixJ = TDM6J(UpStQN[0], UpStateN, LoStQN[0], LoStIndex.N);
     double ThreeJ = TDM3J(UpStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0);
     double intensity = coeff * jjnn * SixJ * ThreeJ * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+    return intensity;
 }//end parIntensity function
 
 /* Intensity of a given transition */
@@ -1741,49 +1743,34 @@ void Inten( int* pnCount,
 			  {
 				  LoStIndex = MWCIndex(LoStQN, i);
 				  //Now check for 3 possible components that the GS component can link with first checking to see if the bad QN's exist in the excited state and only check for A1 (Symm = 0)
-				  //coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
 				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N - 1;
 				      sum += parIntensity(i, UpStQN, LoStQN, LoStIndex, upStateN, pdLoStWF, pdUpStWF, dWeightA);
-				      //j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-                      //sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
-                        //* TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 				  if((LoStIndex.N == uNL || LoStIndex.N == uNH) && LoStIndex.K != 0 && LoStIndex.N != 0)
 				  {
 				      upStateN = LoStIndex.N;
 				      sum += parIntensity(i, UpStQN, LoStQN, LoStIndex, upStateN, pdLoStWF, pdUpStWF, dWeightA);
-					  //coeff += 1;
-					  //j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-                      //sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
-                        //* TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 				  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N + 1;
 				      sum += parIntensity(i, UpStQN, LoStQN, LoStIndex, upStateN, pdLoStWF, pdUpStWF, dWeightA);
-					  //coeff += 2;
-					  //j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-                      //sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
-                        //* TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 			  }//end for loop
 		  }//end if bFlagA == true
 
 		  if(bFlagBC)//C.39
 		  {
-			  int co = 0;
 			  for(int symm = 2; symm < 4; symm++)
 			  {
 				  for(int i = 0; i < DIM; i++)
 				  {
 				      LoStIndex = MWCIndex(LoStQN, i);
-				      co = pow(-1, LoStIndex.N * 2 + 1);//this is the coefficient for the 3J symbols
 					  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 					  {
 					      upStateN = LoStIndex.N - 1;
-					      co *= -1;
 						  if(LoStIndex.K - 1 >= upStateN * -1)
 						  {
 						      upStateK = LoStIndex.K - 1;
