@@ -1741,29 +1741,32 @@ void Inten( int* pnCount,
 			  {
 				  LoStIndex = MWCIndex(LoStQN, i);
 				  //Now check for 3 possible components that the GS component can link with first checking to see if the bad QN's exist in the excited state and only check for A1 (Symm = 0)
-				  coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
+				  //coeff = LoStIndex.K + (UpStQN[0] + 1) / 2 + LoStIndex.N * 2;
 				  if(LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N - 1;
-				      j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
-                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+				      sum += parIntensity(i, UpStQN, LoStQN, LoStIndex, upStateN, pdLoStWF, pdUpStWF, dWeightA);
+				      //j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      //sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        //* TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
-				  if(LoStIndex.N == uNL || LoStIndex.N == uNH && LoStIndex.K != 0 && LoStIndex.N != 0)
+				  if((LoStIndex.N == uNL || LoStIndex.N == uNH) && LoStIndex.K != 0 && LoStIndex.N != 0)
 				  {
 				      upStateN = LoStIndex.N;
-					  coeff += 1;
-					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
-                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+				      sum += parIntensity(i, UpStQN, LoStQN, LoStIndex, upStateN, pdLoStWF, pdUpStWF, dWeightA);
+					  //coeff += 1;
+					  //j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      //sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        //* TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 				  if(LoStIndex.N + 1 == uNL || LoStIndex.N + 1 == uNH)
 				  {
 				      upStateN = LoStIndex.N + 1;
-					  coeff += 2;
-					  j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
-                      sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
-                        * TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
+				      sum += parIntensity(i, UpStQN, LoStQN, LoStIndex, upStateN, pdLoStWF, pdUpStWF, dWeightA);
+					  //coeff += 2;
+					  //j = lReverseIndex(UpStQN, upStateN, LoStIndex.K, 0);
+                      //sum += pow(-1.0, coeff) * JJNN(UpStQN[0], LoStQN[0], upStateN, LoStIndex.N) * TDM6J(UpStQN[0], upStateN, LoStQN[0], LoStIndex.N)
+                        //* TDM3J(upStateN, LoStIndex.K, LoStIndex.N, LoStIndex.K, 0) * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
                   }
 			  }//end for loop
 		  }//end if bFlagA == true
