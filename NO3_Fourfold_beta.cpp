@@ -1103,14 +1103,14 @@ void Hamilt( UINT nStateType,
 				}
 				else//for J = N - 1/2
 				{
-					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) + (2 * BzzE * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a
+					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) + (2 * zetaEt -
+						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a --- took out BzzE from product with zetaEt
 
 					//can only have the matrix element with bra N - 1 here since it means ket's N is higher
 					if(K < N && K > -1 * N)//first check to see if K value is not too large or small to be found in N - 1 set
 					{
 						jj = lReverseIndex(pnQNd, N - 1, K, Symm);
-						ppdH[jj][i] += -1 * (azetaDE * sqrt((double)(N * N) - (double)(K * K))/(dJ + 1)) + NminusOneSR(N, K, Ezz, Exx, Eyy);//i + N - 1 should put me at same K for smaller N value ----C.15b
+						ppdH[jj][i] += -1 * (azetaD * sqrt((double)(N * N) - (double)(K * K))/(dJ + 1)) + NminusOneSR(N, K, Ezz, Exx, Eyy);//i + N - 1 should put me at same K for smaller N value ----C.15b
 						ppdH[i][jj] = ppdH[jj][i];//since H is symmetric C.15b
 					}
 				}//end else
@@ -1260,7 +1260,7 @@ void DHamilt( UINT nStateType,
               int* pnQNd,
               double** ppdDH, int k )
 {
-
+        /*
 	  UINT i, j;
 	  double *pdIndicators, **ppdHbase, *pdOnes;
 	  int **ppnQNm;
@@ -1271,7 +1271,7 @@ void DHamilt( UINT nStateType,
 	  pdIndicators = (double *)calloc(lCN , sizeof( double ) );
 	  pdOnes = (double *)calloc(lCN , sizeof(double));
 
-	  nDim = HamSize(nStateType,pnQNd);  /* Hamiltonian is (4*J+2)x(4*J+2) */
+	  nDim = HamSize(nStateType,pnQNd);  // Hamiltonian is (4*J+2)x(4*J+2)
 
 	  for ( int i = 0; i < lCN; i++ )
       {
@@ -1308,6 +1308,27 @@ void DHamilt( UINT nStateType,
 	free (ppdHbase);
 	free( pdIndicators );
 	free(pdOnes);
+	*/
+  UINT i;
+  double *pdIndicators;
+  int **ppnQNm;
+  UINT nDim;
+
+  pdIndicators = (double *)calloc( ConNum(nStateType), sizeof( double ) );
+  nDim = HamSize(nStateType,pnQNd);  /* Hamiltonian is (4*J+2)x(4*J+2) */
+  for ( i = 0; i < ConNum(nStateType); i++ ) pdIndicators[i]=0.0;
+  pdIndicators[k]=1.0;
+  ppnQNm = (int**)calloc( nDim, sizeof( int* ) );
+
+  for ( i = 0; i < nDim; i++ )
+    ppnQNm[i] = (int*)calloc( QNnumB(nStateType), sizeof(int) );
+
+    Hamilt( nStateType, pdIndicators, pnQNd, ppdDH, ppnQNm);
+
+    for ( i = 0; i < nDim; i++ )
+      free( ppnQNm[i] );
+    free(ppnQNm);
+    free( pdIndicators );
 }
 
 //equation C.39 in Dmitry's write up
