@@ -1098,8 +1098,8 @@ void Hamilt( UINT nStateType,
 			{
 				if(dJ == 2 * N + 1)//means J = N + 1/2
 				{
-					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) - (2 * BzzE * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a
+					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) - (2 * zetaEt -
+						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a --- took out BzzE from product with zetaEt
 				}
 				else//for J = N - 1/2
 				{
