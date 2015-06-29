@@ -71,3 +71,30 @@
 
 862700084 c:\no3multistatemodel\mathutil.h
 
+1402601605 source:u:\specview\models\no3multistatemodel\no3multistatemodel\no3_fourfold_beta.cpp
+	"msdef.h"
+	"mathutil.h"
+	<malloc.h>
+	<math.h>
+	"model.h"
+
+862703684 u:\specview\models\no3multistatemodel\no3multistatemodel\msdef.h
+
+862703684 u:\specview\models\no3multistatemodel\no3multistatemodel\mathutil.h
+
+947204612 u:\specview\models\no3multistatemodel\no3multistatemodel\model.h
+
+1012429380 source:u:\specview\models\no3multistatemodel\no3multistatemodel\mathutil.cpp
+	"msdef.h"
+	<math.h>
+	"mathutil.h"
+
+1012425780 source:\\linuxfs\tam_pub\htran\codes\specview models\no3multistatemodel\mathutil.cpp
+	"msdef.h"
+	<math.h>
+	"mathutil.h"
+
+862700084 \\linuxfs\tam_pub\htran\codes\specview models\no3multistatemodel\msdef.h
+
+862700084 \\linuxfs\tam_pub\htran\codes\specview models\no3multistatemodel\mathutil.h
+

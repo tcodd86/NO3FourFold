@@ -9,7 +9,7 @@ using namespace std;
 /*** Local constant definitions ****/
 
 #define N_CONST_SINGLE	18
-#define N_CONST_TWOFOLD 26
+#define N_CONST_TWOFOLD 24
 #define MBASE			2
 #define N_VOLATILE_TWF  4
 #define N_EVSTATES      2
@@ -303,10 +303,11 @@ double FNK(int N, int K)
 {
 	double n = N;
 	double k = K;
+
 	return sqrt(n * (n + 1) - k * (k + 1));
 }
 
-double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
+double DiagSR(int N, int K, double Ebb, double Ecc, double J) //double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
 {
     //Hirota's with resimplification
     double val = C(J, N) / (2 * N * (N + 1)) * (Ecc * K * K + Ebb * (N * ( N + 1) - K * K));
@@ -314,7 +315,7 @@ double DiagSR(int N, int K, double Eaa, double Ebb, double Ecc, double J)
     return val;
 }
 
-double NminusOneSR(int N, int K, double Eaa, double Ebb, double Ecc)
+double NminusOneSR(int N, int K, double Ebb, double Ecc) //double NminusOneSR(int N, int K, double Eaa, double Ebb, double Ecc)
 {
     //Hirota's with resimplification
     double val = K / (2 * N) * sqrt(N * N - K * K) * (Ebb - Ecc);
@@ -418,19 +419,17 @@ char* ConName( UINT nStateType, UINT nConst )
 		case 10 : return "h1:A1_E";
 		case 11 : return "h1:A2_E";
 		case 12 : return "h1:E";
-		case 13 : return "zeta_t:E";
-		case 14 : return "zeta_t:A1A2";
-		case 15 : return "a0_zeta_e_dz:E";
-		case 16 : return "a_zeta_e_dz:A1A2";
-		case 17 : return "a0_zeta_e_d";
-		case 18 : return "BzzA1A2_zeta_t_A1A2";
-		case 19 : return "Delta_E_A1_A2";
-		case 20 : return "Delta_E_A1_E";
-		case 21 : return "Epsilon_xxyy";//epsilon aa + bb
-		case 22 : return "Epsilon_zz";//epsilon cc
-		case 23 : return "DN";
-		case 24 : return "DNK";
-		case 25 : return "DK";
+		case 13 : return "BzzE_zeta_t:E";
+		case 14 : return "a0_zeta_e_dz:E";
+		case 15 : return "a_zeta_e_dz:A1A2";
+		case 16 : return "BzzA1A2_zeta_t_A1A2";
+		case 17 : return "Delta_E_A1_A2";
+		case 18 : return "Delta_E_A1_E";
+		case 19 : return "Epsilon_xxyy";//epsilon aa + bb
+		case 20 : return "Epsilon_zz";//epsilon cc
+		case 21 : return "DN";
+		case 22 : return "DNK";
+		case 23 : return "DK";
 		default : return "Constant";
 		}//end switch nConst
 	default : return "State"; //None of the defined
@@ -459,16 +458,16 @@ void InitCo( UINT nStateType, double* pdConst )
 		return;
 
 	case 1 :
-		pdConst[0] = 0.21;//Bzz  A1
+		pdConst[0] = 0.215;//Bzz  A1
 		pdConst[1] = 0.43;//Byy  A1
 		pdConst[2] = 0.43;//Bxx  A1
-		pdConst[3] = 0.0;//Bzz  A2
-		pdConst[4] = 0.0;//Byy  A2
-		pdConst[5] = 0.0;//Bxx  A2
-		pdConst[6] = 0.0;//Bzz  E
-		pdConst[7] = 0.0;//Byy  E
-		pdConst[8] = 0.0;//Bxx  E
-		pdConst[21] = 0.015;
+		pdConst[3] = 0.215;//Bzz  A2
+		pdConst[4] = 0.43;//Byy  A2
+		pdConst[5] = 0.43;//Bxx  A2
+		pdConst[6] = 0.215;//Bzz  E
+		pdConst[7] = 0.43;//Byy  E
+		pdConst[8] = 0.43;//Bxx  E
+		pdConst[19] = 0.016;
 		return;
 	}
 }
@@ -647,7 +646,7 @@ idx lIndex(int *pnQNd, int nx)
 	}
 	else
 	{
-		out.P = sBlock - 1;
+		out.P = sBlock - 1;  // HENRY NOTE: -2? P = 0 or 1?
 	}
 	out.Symm = sBlock;//this is to assign the symmetry labels. 0 for A1, 1 for A2, 2 for E-, 3 for E+
 	spot = nx % NK;
@@ -741,7 +740,7 @@ void Assign( UINT nStateType, double* pdStWF, int* StQN, int StNum )
 		if (indx<=2*N)
 		{
 			StQN[1] = N;
-			StQN[2] = abs(indx-N);
+			StQN[2] = abs(indx - N);
 			if (indx-N == 0)
 			{
 				if (PAR(N) > 0) StQN[3] = 0;
@@ -785,7 +784,7 @@ void Assign( UINT nStateType, double* pdStWF, int* StQN, int StNum )
 		else
 		{
 			StQN[1] = N-1;
-			StQN[2] = abs(indx - 3*N);
+			StQN[2] = abs(indx - 3 * N);
 			if (indx - 3*N == 0)
 			{
 				if (PAR(N-1)>0) StQN[3] = 0;
@@ -831,20 +830,34 @@ void Assign( UINT nStateType, double* pdStWF, int* StQN, int StNum )
 
 	if(nStateType == 1)//Working assignment function for Fourfold states
 	{
-	    int j = 0;
+		int dim = 8 * (StQN[0] + 1);
+		int id = 0;
+		double max = fabs(pdStWF[0]);
 		idx QN;
-		int id, DIM;
-		DIM = 8*(StQN[0] + 1);
-		double max = abs(pdStWF[0]);
-		id = 0;
-		for(int i = 1; i < DIM; i++)
+		for (int i = 1; i < dim; i++)
 		{
-			if(abs(pdStWF[i]) > max)
+			if (fabs(pdStWF[i])>max)
 			{
-				max = abs(pdStWF[i]);
+				max = fabs(pdStWF[i]);
 				id = i;
 			}
 		}
+
+		//int j = 0; // HENRY NOTE: FIXED IT: Problem - abs is C function. using namespace std did not infer std::abs - 010215
+		//idx QN;
+		//int id, DIM;
+		//DIM = 8*(StQN[0] + 1);
+		//double max = abs(pdStWF[0]);
+		//id = 0;
+		//for(int i = 1; i < DIM; i++)
+		//{
+		//	if(abs(pdStWF[i]) > max)
+		//	{
+		//		max = abs(pdStWF[i]);
+		//		id = i;
+		//	}
+		//}
+
 		QN = lIndex(StQN, id);
 		StQN[1] = QN.N;
 		StQN[2] = QN.K;
@@ -1015,12 +1028,12 @@ void Hamilt( UINT nStateType,
 
 	else if(nStateType == 1)//Fourfold Hamiltonian
 	{
-		double BzzE, BzzAO, BzzAT, ByyE, ByyAO, ByyAT, BxxE, BxxAO, BxxAT, epsilon, zetaEt, zetaAAt, hAOE,
-			hATE, hE, azetaDE, azetaDAA, azetaD, bzzAOATzetat, dEAOAT, dEAOE, JJ, Exx, Eyy, Ezz, DN, DK, D_NK;
+		double BzzE, BzzAO, BzzAT, ByyE, ByyAO, ByyAT, BxxE, BxxAO, BxxAT, epsilon, BzzEzetaEt, hAOE,
+			hATE, hE, azetaDE, azetaDAA, bzzAOATzetat, dEAOAT, dEAOE, JJ, Exx, Ezz, DN, DK, D_NK;
 
 		int DIM, N, K, Par, Symm, dJ, NK, jj, coeff;
 		idx QN;
-
+		//removed Eyy ( = Exx ) and zetaAAt (not used)
 		BzzAO = pdConst[0];
 		ByyAO = pdConst[1];
 		BxxAO = pdConst[2];
@@ -1034,20 +1047,17 @@ void Hamilt( UINT nStateType,
 		hAOE = pdConst[10];
 		hATE = pdConst[11];
 		hE = pdConst[12];
-		zetaEt = pdConst[13];
-		zetaAAt = pdConst[14];
-		azetaDE = pdConst[15];
-		azetaDAA = pdConst[16];
-		azetaD = pdConst[17];
-		bzzAOATzetat = pdConst[18];
-		dEAOAT = pdConst[19];
-		dEAOE = pdConst[20];
-		Exx = pdConst[21];
-		Eyy = pdConst[21];
-		Ezz = pdConst[22];
-		DN = pdConst[23];
-		D_NK = pdConst[24];
-		DK = pdConst[25];
+		BzzEzetaEt = pdConst[13];
+		azetaDE = pdConst[14];
+		azetaDAA = pdConst[15];
+		bzzAOATzetat = pdConst[16];
+		dEAOAT = pdConst[17];
+		dEAOE = pdConst[18];
+		Exx = pdConst[19];
+		Ezz = pdConst[20];
+		DN = pdConst[21];
+		D_NK = pdConst[22];
+		DK = pdConst[23];
 
 		DIM = 8*(pnQNd[0] + 1);
 		NK = DIM / 4;
@@ -1076,21 +1086,28 @@ void Hamilt( UINT nStateType,
 			ppnQNm[i][2] = Par;
 			ppnQNm[i][3] = Symm;
 
+
 			//Vibronically Diagonal Elements First
 			if(Symm == 0)//means its A1
 			{
-				ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K) + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K); //what I had originally for Hirota's formulas: DiagSR(N, K, Ezz, Exx, Eyy, JJ);//C.16
+				if (N != 0) // For the case when J = 1/2 and N = 0 which conflicts with DiagSR
+				{
+					ppdH[i][i] += BzzAO * K * K + 0.5 * (BxxAO + ByyAO) * (N * (N + 1) - K * K) + CentDist(DN, D_NK, DK, N, K) + DiagSR(N, K, Exx, Ezz, JJ); //C.16
+				}
 			}
 			if(Symm == 1)//means its A2
 			{
-				ppdH[i][i] += BzzAT * K * K + 0.5 * (BxxAT + ByyAT) * (N * (N + 1) - K * K) + dEAOAT + DiagSR(N, K, Ezz, Exx, Eyy, JJ) + CentDist(DN, D_NK, DK, N, K);//C.16
+				if (N != 0)
+				{
+					ppdH[i][i] += BzzAT * K * K + 0.5 * (BxxAT + ByyAT) * (N * (N + 1) - K * K) + dEAOAT + CentDist(DN, D_NK, DK, N, K) + DiagSR(N, K, Exx, Ezz, JJ); //C.16
+				}
 			}
-			if(Symm < 2 && dJ == 2 * N - 1)//means A1 or A2 and N is the larger of two values
+			if (Symm < 2 && dJ == 2 * N - 1)//means A1 or A2 and N is the larger of two values
 			{
 			    if(K < N && K > -1 * N)//means K isn't too large
                 {
                     int o = lReverseIndex(pnQNd, N - 1, K, Symm);
-                    ppdH[i][o] += NminusOneSR(N, K, Eyy, Exx, Ezz); //what I had originally for Hirota's formulas: NminusOneSR(N, K, Ezz, Exx, Eyy);
+                    ppdH[i][o] += NminusOneSR(N, K, Exx, Ezz);
                     ppdH[o][i] = ppdH[i][o];
                 }
 			}
@@ -1098,19 +1115,20 @@ void Hamilt( UINT nStateType,
 			{
 				if(dJ == 2 * N + 1)//means J = N + 1/2
 				{
-					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) - (2 * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a --- took out BzzE from product with zetaEt
+					if (N != 0)
+					{
+						ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) - (2 * BzzEzetaEt - azetaDE / (dJ + 1)) * K + dEAOE + CentDist(DN, D_NK, DK, N, K) + DiagSR(N, K, Exx, Ezz, JJ); //C.15a
+					}
 				}
 				else//for J = N - 1/2
 				{
-					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) + (2 * zetaEt -
-						azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Eyy, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a --- took out BzzE from product with zetaEt
+					ppdH[i][i] += BzzE * K * K + 0.5 * (BxxE + ByyE) * (N * (N + 1) - K * K) - (2 * BzzEzetaEt + azetaDE / (dJ + 1)) * K + dEAOE + DiagSR(N, K, Exx, Ezz, JJ) + CentDist(DN, D_NK, DK, N, K);//C.15a
 
 					//can only have the matrix element with bra N - 1 here since it means ket's N is higher
 					if(K < N && K > -1 * N)//first check to see if K value is not too large or small to be found in N - 1 set
 					{
 						jj = lReverseIndex(pnQNd, N - 1, K, Symm);
-						ppdH[jj][i] += -1 * (azetaD * sqrt((double)(N * N) - (double)(K * K))/(dJ + 1)) + NminusOneSR(N, K, Ezz, Exx, Eyy);//i + N - 1 should put me at same K for smaller N value ----C.15b
+						ppdH[jj][i] += -1 * (azetaDE * sqrt((double)(N * N) - (double)(K * K))/(dJ + 1)) + NminusOneSR(N, K, Exx, Ezz);//i + N - 1 should put me at same K for smaller N value ----C.15b
 						ppdH[i][jj] = ppdH[jj][i];//since H is symmetric C.15b
 					}
 				}//end else
@@ -1146,7 +1164,7 @@ void Hamilt( UINT nStateType,
 			if(Symm == 0)//means A1, take care of all terms here
 			{
 				jj = lReverseIndex(pnQNd, N, K, 1);
-				ppdH[i][jj] += -2 * bzzAOATzetat * K;//C.19a
+				ppdH[i][jj] += -2 * bzzAOATzetat * K;//C.19a:
 				ppdH[jj][i] = ppdH[i][jj];//C.19a
 
 				if(dJ == 2 * N + 1)//means J = N + 1/2
@@ -1154,7 +1172,7 @@ void Hamilt( UINT nStateType,
 					ppdH[i][jj] += -1 * azetaDAA * K / (dJ + 1);//C.20a
 					ppdH[jj][i] += -1 * azetaDAA * K / (dJ + 1);//C.20a
 
-					//since J = N + 1/2 this is the smaller of the two N values, no need to do bounds check on K
+					// since J = N + 1/2 this is the smaller of the two N values, no need to do bounds check on K
 					int jjjj = lReverseIndex(pnQNd, N + 1, K, 1);
 					ppdH[jjjj][i] += azetaDAA * sqrt((JJ + 0.5) * (JJ + 0.5) - (double)(K * K)) / (double)(dJ + 1);//C.20b
 					ppdH[i][jjjj] = ppdH[jjjj][i];//C.20b
@@ -1260,8 +1278,7 @@ void DHamilt( UINT nStateType,
               int* pnQNd,
               double** ppdDH, int k )
 {
-        /*
-	  UINT i, j;
+	 /* UINT i, j;
 	  double *pdIndicators, **ppdHbase, *pdOnes;
 	  int **ppnQNm;
 	  UINT nDim;
@@ -1309,26 +1326,25 @@ void DHamilt( UINT nStateType,
 	free( pdIndicators );
 	free(pdOnes);
 	*/
-  UINT i;
-  double *pdIndicators;
-  int **ppnQNm;
-  UINT nDim;
+	UINT i;
+	double *pdIndicators;
+	int **ppnQNm;
+	UINT nDim;
 
-  pdIndicators = (double *)calloc( ConNum(nStateType), sizeof( double ) );
-  nDim = HamSize(nStateType,pnQNd);  /* Hamiltonian is (4*J+2)x(4*J+2) */
-  for ( i = 0; i < ConNum(nStateType); i++ ) pdIndicators[i]=0.0;
-  pdIndicators[k]=1.0;
-  ppnQNm = (int**)calloc( nDim, sizeof( int* ) );
+	pdIndicators = (double *)calloc(ConNum(nStateType), sizeof(double));
+	nDim = HamSize(nStateType, pnQNd);
+	for (i = 0; i < ConNum(nStateType); i++) pdIndicators[i] = 0.0;
+	pdIndicators[k] = 1.0;
+	ppnQNm = (int**)calloc(nDim, sizeof(int*));
 
-  for ( i = 0; i < nDim; i++ )
-    ppnQNm[i] = (int*)calloc( QNnumB(nStateType), sizeof(int) );
+	for (i = 0; i < nDim; i++)
+		ppnQNm[i] = (int*)calloc(QNnumB(nStateType), sizeof(int));
 
-    Hamilt( nStateType, pdIndicators, pnQNd, ppdDH, ppnQNm);
+	Hamilt(nStateType, pdIndicators, pnQNd, ppdDH, ppnQNm);
 
-    for ( i = 0; i < nDim; i++ )
-      free( ppnQNm[i] );
-    free(ppnQNm);
-    free( pdIndicators );
+	for (i = 0; i < nDim; i++) free(ppnQNm[i]);
+	free(ppnQNm);
+	free(pdIndicators);
 }
 
 //equation C.39 in Dmitry's write up
@@ -1337,8 +1353,8 @@ double perpIntensity(int i, int* UpStQN, int* LoStQN, idx LoStIndex, int symm, i
       int j = lReverseIndex(UpStQN, UpStateN, UpStateK, symm);
       double coeff = pow(-1.0, (double)(UpStQN[0] + 1) / 2.0 + (double)UpStateK) / sqrt(2.0);
       double SixJ = TDM6J(UpStQN[0], UpStateN, LoStQN[0], LoStIndex.N);
-      double ThreeJ_One = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, LoStIndex.K, 1);
-      double ThreeJ_Two = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, -1 * LoStIndex.K, 1);
+	  double ThreeJ_One = TDM3J(LoStIndex.N, -1 * LoStIndex.K, UpStateN, -1 * UpStateK, 1); // double ThreeJ_One = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, LoStIndex.K, 1);
+	  double ThreeJ_Two = TDM3J(LoStIndex.N, LoStIndex.K, UpStateN, -1 * UpStateK, 1); // double ThreeJ_Two = TDM3J(UpStateN, -1 * UpStateK, LoStIndex.N, -1 * LoStIndex.K, 1);
       double jjnn = JJNN(UpStQN[0], LoStQN[0], UpStateN, LoStIndex.N);
       double coeff_Two = pow(-1.0, LoStIndex.N - LoStIndex.K + 2.0 + 2.0 + symm - 1.0);//coefficient in front of second 3J symbol, p = symm - 1, k = j = 2.0
       double co = pow(-1.0, LoStIndex.N + UpStateN + 1);//takes care of 3J symbol being different from function
@@ -1358,6 +1374,16 @@ double parIntensity(int i, int* UpStQN, int* LoStQN, idx LoStIndex, int UpStateN
     double intensity = coeff * jjnn * SixJ * ThreeJ * pdLoStWF[i] * pdUpStWF[j] * dWeightA;
     return intensity;
 }//end parIntensity function
+
+/* HENRY NOTE: IMPORTANT ERROR IN INTENSITY FUNCTIONS 
+
+TDM3J uses arguments in a nonintuitive manner. TDM3J(1, 2, 3, 4, 5) computes
+(3)	1	(1)
+(4)	(5)	-(2)
+Note the ordering and the fact that (2) is made negative, e.g. if m3 is positive, a negative argument should be used.
+
+TDM3J is misused in the above functions and in the intensity function below. I have coreected the case of
+isolated to fourfold perpendicular, however, EVERY other case is not yet corrected. */
 
 /* Intensity of a given transition */
 void Inten( int* pnCount,
@@ -1814,7 +1840,7 @@ void Inten( int* pnCount,
 						  }
 						  if(LoStIndex.K + 1 <= upStateN)
 						  {
-						      upStateK = LoStIndex.N + 1;
+							  upStateK = LoStIndex.K + 1; //upStateK = LoStIndex.N + 1; // HENRY NOTE: Why N?
 						      sum += perpIntensity(i, UpStQN, LoStQN, LoStIndex, symm, upStateK, upStateN, pdLoStWF, pdUpStWF, dWeightB);
 						  }
 					  }//end delta N = 0
