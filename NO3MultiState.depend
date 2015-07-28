@@ -98,3 +98,12 @@
 
 862700084 \\linuxfs\tam_pub\htran\codes\specview models\no3multistatemodel\mathutil.h
 
+1012429380 source:\\linuxfs\tam_pub\htran\codes\specview_models\no3fourfold\mathutil.cpp
+	"msdef.h"
+	<math.h>
+	"mathutil.h"
+
+862700084 \\linuxfs\tam_pub\htran\codes\specview_models\no3fourfold\msdef.h
+
+862700084 \\linuxfs\tam_pub\htran\codes\specview_models\no3fourfold\mathutil.h
+
