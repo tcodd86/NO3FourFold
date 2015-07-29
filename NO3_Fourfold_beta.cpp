@@ -1919,7 +1919,7 @@ void Inten( int* pnCount,
 
 		  if (bFlagA)//C.32
 		  {
-			  for (int i = 0; i < DIM; i++)
+			  for (int i = DIM / 4; i < DIM / 2; i++) // Loop over A2 since that's the ground state
 			  {
 				  LoStIndex = lIndex(LoStQN, i); // MWCIndex(LoStQN, i);
 				  //Now check for 3 possible components that the GS component can link with first checking to see if the bad QN's exist in the excited state and only check for A1 (Symm = 0)
@@ -1945,7 +1945,7 @@ void Inten( int* pnCount,
 		  {
 			  for (int symm = 2; symm < 4; symm++)
 			  {
-				  for (int i = 0; i < DIM; i++)
+				  for (int i = DIM / 4; i < DIM / 2; i++) // Only loop over A2 levels
 				  {
 					  LoStIndex = lIndex(LoStQN, i); // MWCIndex(LoStQN, i);
 					  if (LoStIndex.N - 1 == uNL || LoStIndex.N - 1 == uNH)
